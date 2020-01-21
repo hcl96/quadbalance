@@ -33,17 +33,6 @@ thetapre = 0;
 thetalppre = 0;
 thetalprec = np.array([])
 thetalprec = np.array([])
-
-gxrec = np.array([])
-gyrec = np.array([])
-
-phidothppre = 0
-phidotpre = 0
-thetadothppre = 0
-thetadotpre = 0
-psidothppre = 0
-psidotpre = 0
-psidothppre = 0
 psi_raw = 0
 
 ## ESC channel
@@ -56,6 +45,8 @@ power = 1050
 powerrec = np.array([])
 u_array = np.array([])
 ucontrolrec = np.array([])
+roll_ref = 0
+pitch_ref = 0
 
 ## Kalman Filter Initialization
 kf = KalmanFilter(dim_x = 4, dim_z = 4)
@@ -109,25 +100,35 @@ def esc_drive(u1, u2, u3, u4):
 	pi.set_servo_pulsewidth(ESC4, u4)
 
 
-def power_update(power):
+def power_update(power, roll_ref, pitch_ref):
 	if isData():
+		
 		u_input = sys.stdin.read(1)
 		if power >= 1050 and power <= 2000:
-			if u_input == "w":
+			if u_input == "p":
 				power += 20
-			elif u_input == "s":
+			elif u_input == "l":
 				power -= 20
+			elif u_input == "w":
+				pitch_ref = 20
+			elif u_input == "s":
+				pitch_ref = -20
+			elif u_input == "a":
+				roll_ref = 20
+			elif u_input == "d":
+				roll_ref = -20
 			else:
 				pass
 		if power < 1050:
 			power = 1050
 		if power > 2000:
 			power = 2000
-	return power
+	
+	return power, roll_ref, pitch_ref
 
-def motor_control(power, klqr, kf_est):
+def motor_control(power, roll_ref, pitch_ref, klqr, kf_est):
 	u_array = np.matmul(-klqr, kf_est)
-	esc_drive(power + int(u_array[0]), power + int(u_array[1]), power + int(u_array[2]), power + int(u_array[3]))
+	esc_drive(power-roll_ref-pitch_ref+int(u_array[0]), power+roll_ref-pitch_ref+int(u_array[1]), power+roll_ref+pitch_ref+int(u_array[2]), power-roll_ref+pitch_ref+ int(u_array[3]))
 	# esc_drive(power, power, power, power)
 	return u_array
 
@@ -156,10 +157,11 @@ try:
 			# print("Warning: IMU Disconnect. Continuing")
 			continue
 
+		
 		# Calculate raw Euler angles
 		phi_raw = get_phi_raw(ay, az)
 		theta_raw = get_theta_raw(-ax, ay, az)
-		psi_raw = get_psi_raw(psidothppre, psi_raw)
+		psi_raw = get_psi_raw(gz, psi_raw)
 
 		# Filter to clean noise
 		philp = low_pass(philppre, phi_raw)
@@ -173,7 +175,7 @@ try:
 		thetalprec = np.append(thetalprec, thetalp*(180.0/PI))
 
 		# KalmanFilter Euler Angles
-		z = np.array([[(gx-gxbias)*(PI/180.0)],[phi_raw-2*(PI/180)],[(gy-gybias)*(PI/180.0)],[theta_raw-7*(PI/180)]])
+		z = np.array([[(gx-gxbias)*(PI/180.0)],[phi_raw-1*(PI/180)],[(gy-gybias)*(PI/180.0)],[theta_raw-8*(PI/180)]])
 		kf.predict()
 		kf.update(z)
 		phikfrec = np.append(phikfrec, kf.x[1]*(180.0/PI))
@@ -181,8 +183,16 @@ try:
 		# print(kf.x)
 
 		# Update Actuators
-		power = power_update(power)
-		u_array = motor_control(power, klqr, kf.x)
+		power, roll_ref, pitch_ref = power_update(power, roll_ref, pitch_ref)
+		u_array = motor_control(power, roll_ref, pitch_ref, klqr, kf.x)
+		if roll_ref > 0:
+			roll_ref -= 0.5
+		else:
+			roll_ref += 0.5
+		if pitch_ref > 0:
+			pitch_ref -= 0.5
+		else:
+			pitch_ref += 0.5
 		
 		# Record keeping
 		currentDT = int(round(time.time()*1000))
@@ -190,11 +200,12 @@ try:
 		
 		phirec = np.append(phirec, phi_raw*(180.0/PI))
 		thetarec = np.append(thetarec, theta_raw*(180.0/PI))
-		gxrec = np.append(gxrec, gx)
-		gyrec = np.append(gyrec, gy)
+		phidotrec = np.append(phidotrec, gx)
+		thetadotrec = np.append(thetadotrec, gy)
 		# psirec = np.append(psirec, psi_raw*(180.0/PI))
 		
 		powerrec = np.append(powerrec, power)
+
 		# ucontrolrec = np.append(ucontrolrec, u_array[0]-u_array[2])
 		# psihprec = np.append(psihprec, psi*(180.0/PI))
 
@@ -217,7 +228,7 @@ finally:
 	print("Writing Log File")
 	log = open("quadlog.txt", "w+")
 	for i in range(0, np.shape(dtrec)[0]-1):
-		log.write("{0:1.0f},{1:1.2f},{2:1.2f},{3:1.2f},{4:1.2f},{5:1.0f}\n".format(dtrec[i], phirec[i], thetarec[i], gxrec[i], gyrec[i], powerrec[i]))
+		log.write("{0:1.0f},{1:1.2f},{2:1.2f},{3:1.2f},{4:1.2f},{5:1.0f}\n".format(dtrec[i], phirec[i], thetarec[i], phidotrec[i], thetadotrec[i], powerrec[i]))
 	log.close()
 	## Print Results
 	plt.subplot(211)
