@@ -173,7 +173,7 @@ try:
 		thetalprec = np.append(thetalprec, thetalp*(180.0/PI))
 
 		# KalmanFilter Euler Angles
-		z = np.array([[(gx-gxbias)*(PI/180.0)],[phi_raw-3*(PI/180)],[(gy-gybias)*(PI/180.0)],[theta_raw-5*(PI/180)]])
+		z = np.array([[(gx-gxbias)*(PI/180.0)],[phi_raw-2*(PI/180)],[(gy-gybias)*(PI/180.0)],[theta_raw-7*(PI/180)]])
 		kf.predict()
 		kf.update(z)
 		phikfrec = np.append(phikfrec, kf.x[1]*(180.0/PI))
