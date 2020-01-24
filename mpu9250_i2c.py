@@ -87,7 +87,7 @@ def gyro_caliberate():
     gxbiasrec = np.array([])
     gybiasrec = np.array([])
     gzbiasrec = np.array([])
-    for i in range (1,200):
+    for i in range (1,100):
         ax,ay,az,gx,gy,gz = mpu6050_read()
         gxbiasrec = np.append(gxbiasrec, gx)
         gybiasrec = np.append(gybiasrec, gy)
