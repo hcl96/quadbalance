@@ -12,8 +12,9 @@ import sys, select, tty, termios # for the input
 import matplotlib.pyplot as plt
 
 ## System Parameters
-DT = 0.01
+DT = 0.010
 PI = 3.14159
+printstat = 0
 
 dtrec = np.array([])
 # Raw Euler Log
@@ -234,10 +235,10 @@ if __name__=="__main__":
 			# psihprec = np.append(psihprec, psi*(180.0/PI))
 
 			# print("{0:1.0f},{1:1.2f},{2:1.2f},{3:1.2f},{4:1.2f}".format(power, phidothp,float(kf.x[1]*(180.0/PI)),thetadothp,float(kf.x[3]*(180.0/PI))))
-
-			print(" | {0:2.7f} | {1:2.6f} | {2:3.1f} | {3:1.0f}  |  {4:3.1f}  |  {5:2.1f}  |  {6:2.1f}  |  {7:2.1f}  |  {8:2.1f}  |  {9:2.1f}  |    "\
-				.format(gpsd.fix.latitude, gpsd.fix.longitude, gpsd.fix.altitude, power, float(kf.x[1])*(180.0/PI), float(kf.x[3])*(180.0/PI), psi_raw, gx, gy, gz), end="\r")
-			# print('gyro [uT]:   x = {0:1.2f} , y = {1:1.2f}, z = {2:1.2f}'.format(phidothp,thetadothp,psidothp))
+			if (printstat % 10) == 0:
+				print(" | {0:2.7f} | {1:2.6f} | {2:3.1f} | {3:1.0f}  |  {4:3.1f}  |  {5:2.1f}  |  {6:2.1f}  |  {7:2.1f}  |  {8:2.1f}  |  {9:2.1f}  |    "\
+					.format(gpsd.fix.latitude, gpsd.fix.longitude, gpsd.fix.altitude, power, float(kf.x[1])*(180.0/PI), float(kf.x[3])*(180.0/PI), psi_raw, gx, gy, gz), end="\r")
+			printstat += 1
 			# Sleep at some point
 			time.sleep(DT-0.005)
 
