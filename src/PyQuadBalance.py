@@ -52,35 +52,35 @@ ucontrolrec = np.array([])
 roll_ref = 0
 pitch_ref = 0
 
-gpsd = None
+# gpsd = None
 
 ## Kalman Filter Initialization
 kf = KalmanFilter(dim_x = 4, dim_z = 4)
 kf.x = np.array([[0],[0],[0],[0]])
 kf.F = np.array([[1,0,0,0],[DT,1,0,0],[0,0,1,0],[0,0,DT,1]])
-kf.B = np.array([[0.0001,-0.0001,-0.0001,0.0001],[0.0000007,-0.0000007,-0.0000007,0.0000007],[0.0001,0.0001,-0.0001,-0.0001],[0.0000007,0.0000007,-0.0000007,-0.0000007]])
+kf.B = 0*np.array([[0.0001,-0.0001,-0.0001,0.0001],[0.0000007,-0.0000007,-0.0000007,0.0000007],[0.0001,0.0001,-0.0001,-0.0001],[0.0000007,0.0000007,-0.0000007,-0.0000007]])
 kf.H = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
 kf.P = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
-kf.Q = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
-kf.R = np.array([[15000,0,0,0],[0,95000,0,0],[0,0,45000,0],[0,0,0,100000]]) # default is 1000, 10000
+kf.Q = np.array([[0.01,0,0,0],[0,0.01,0,0],[0,0,0.01,0],[0,0,0,0.01]])
+kf.R = np.array([[100,0,0,0],[0,300,0,0],[0,0,100,0],[0,0,0,300]]) # default is 1000, 10000
 
 klqr1 = 40 # default 20
 klqr2 = 80 # default 80
 klqr = 0*np.array([[klqr1, klqr2, klqr1, klqr2],[-klqr1, -klqr2, klqr1, klqr2],[-klqr1, -klqr2, -klqr1, -klqr2],[klqr1, klqr2, -klqr1, -klqr2]])
 
 ## Functions & Classes
-class GpsPoller(threading.Thread):
-	def __init__(self):
-		threading.Thread.__init__(self)
-		global gpsd #bring it in scope
-		gpsd = gps(mode=WATCH_ENABLE) #starting the stream of info
-		self.current_value = None
-		self.running = True #setting the thread running to true
+# class GpsPoller(threading.Thread):
+# 	def __init__(self):
+# 		threading.Thread.__init__(self)
+# 		global gpsd #bring it in scope
+# 		gpsd = gps(mode=WATCH_ENABLE) #starting the stream of info
+# 		self.current_value = None
+# 		self.running = True #setting the thread running to true
 
-	def run(self):
-		global gpsd
-		while gpsp.running:
-			gpsd.next() #this will continue to loop and grab EACH set of gpsd info to clear the buffer
+# 	def run(self):
+# 		global gpsd
+# 		while gpsp.running:
+# 			gpsd.next() #this will continue to loop and grab EACH set of gpsd info to clear the buffer
 
 def isData():
     return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
@@ -164,18 +164,18 @@ time.sleep(0.1)
 
 if __name__=="__main__":
 	# Configure GPS
-	gpsp = GpsPoller() # create thread
-	print("[Boot] GPS Configured")
+	# gpsp = GpsPoller() # create thread
+	# print("[Boot] GPS Configured")
 	# Get initial time 
 	initialDT=int(round(time.time()*1000))
 	print("[Boot] Bootup Successful. Initializing Control Sequence ... ")
 	time.sleep(1)
 	# Print Main control panel
 	print(" - - - - - - - - PyQuadBalance - - - - - - - - ")
-	print(" |  Latitude  |  Longitude  |  Alt  | Power |  Phi  |  Theta  |  Psi  | Phidot | Thetadot | Psidot |    ")
+	# print(" |  Latitude  |  Longitude  |  Alt  | Power |  Phi  |  Theta  |  Psi  | Phidot | Thetadot | Psidot |    ")
 	
 	try:
-		gpsp.start()
+		# gpsp.start()
 		while 1:
 			try:
 				ax,ay,az,gx,gy,gz = mpu6050_read() # read and convert mpu6050 data
@@ -222,9 +222,9 @@ if __name__=="__main__":
 			dtrec = np.append(dtrec, currentDT-initialDT)
 			
 			phirec = np.append(phirec, phi_raw*(180.0/PI))
-			philprec = np.append(philprec, philp*(180.0/PI))
+			# philprec = np.append(philprec, philp*(180.0/PI))
 			thetarec = np.append(thetarec, theta_raw*(180.0/PI))
-			thetalprec = np.append(thetalprec, thetalp*(180.0/PI))
+			# thetalprec = np.append(thetalprec, thetalp*(180.0/PI))
 			phidotrec = np.append(phidotrec, gx)
 			thetadotrec = np.append(thetadotrec, gy)
 			# psirec = np.append(psirec, psi_raw*(180.0/PI))
@@ -234,22 +234,22 @@ if __name__=="__main__":
 			# ucontrolrec = np.append(ucontrolrec, u_array[0]-u_array[2])
 			# psihprec = np.append(psihprec, psi*(180.0/PI))
 
-			# print("{0:1.0f},{1:1.2f},{2:1.2f},{3:1.2f},{4:1.2f}".format(power, phidothp,float(kf.x[1]*(180.0/PI)),thetadothp,float(kf.x[3]*(180.0/PI))))
-			if (printstat % 10) == 0:
-				print(" | {0:2.7f} | {1:2.6f} | {2:3.1f} | {3:1.0f}  |  {4:3.1f}  |  {5:2.1f}  |  {6:2.1f}  |  {7:2.1f}  |  {8:2.1f}  |  {9:2.1f}  |    "\
-					.format(gpsd.fix.latitude, gpsd.fix.longitude, gpsd.fix.altitude, power, float(kf.x[1])*(180.0/PI), float(kf.x[3])*(180.0/PI), psi_raw, gx, gy, gz), end="\r")
+			print("{0:1.0f},{1:1.2f},{2:1.2f},{3:1.2f},{4:1.2f}".format(power, gx,float(kf.x[1]*(180.0/PI)),gy,float(kf.x[3]*(180.0/PI))), end="\r")
+			# if (printstat % 10) == 0:
+			# 	print(" | {0:2.7f} | {1:2.6f} | {2:3.1f} | {3:1.0f}  |  {4:3.1f}  |  {5:2.1f}  |  {6:2.1f}  |  {7:2.1f}  |  {8:2.1f}  |  {9:2.1f}  |    "\
+					# .format(gpsd.fix.latitude, gpsd.fix.longitude, gpsd.fix.altitude, power, float(kf.x[1])*(180.0/PI), float(kf.x[3])*(180.0/PI), psi_raw, gx, gy, gz), end="\r")
 			printstat += 1
 			# Sleep at some point
 			time.sleep(DT-0.005)
 
 	except KeyboardInterrupt:
-		print(" | {0:2.7f} | {1:2.6f} | {2:3.1f} | {3:1.0f}  |  {4:3.1f}  |  {5:2.1f}  |  {6:2.1f}  |  {7:2.1f}  |  {8:2.1f}  |  {9:2.1f}  |    "\
-				.format(gpsd.fix.latitude, gpsd.fix.longitude, gpsd.fix.altitude, power, float(kf.x[1])*(180.0/PI), float(kf.x[3])*(180.0/PI), psi_raw, gx, gy, gz), end="\r")
+		# print(" | {0:2.7f} | {1:2.6f} | {2:3.1f} | {3:1.0f}  |  {4:3.1f}  |  {5:2.1f}  |  {6:2.1f}  |  {7:2.1f}  |  {8:2.1f}  |  {9:2.1f}  |    "\
+		# 		.format(gpsd.fix.latitude, gpsd.fix.longitude, gpsd.fix.altitude, power, float(kf.x[1])*(180.0/PI), float(kf.x[3])*(180.0/PI), psi_raw, gx, gy, gz), end="\r")
 		print("Interrupt Received. Exit")
 
 	finally:
-		gpsp.running = False
-		gpsp.join() # wait for the thread to finish what it's doing
+		# gpsp.running = False
+		# gpsp.join() # wait for the thread to finish what it's doing
 		## Shut down motors and stop GPIO
 		esc_drive(1000, 1000, 1000, 1000)
 		pi.stop()
@@ -257,14 +257,14 @@ if __name__=="__main__":
 		print("Writing Log File")
 		log = open("quadlog.txt", "w+")
 		for i in range(0, np.shape(dtrec)[0]-1):
-			log.write("{0:1.0f},{1:1.2f},{2:1.2f},{3:1.2f},{4:1.2f},{5:1.0f}\n".format(dtrec[i], phirec[i], thetarec[i], phidotrec[i], thetadotrec[i], powerrec[i]))
+			log.write("{0:1.0f},{1:1.2f},{2:1.2f},{3:1.2f},{4:1.2f},{5:1.2f},{6:1.2f},{7:1.0f}\n".format(dtrec[i], phirec[i], thetarec[i], phidotrec[i], thetadotrec[i], phikfrec[i], thetakfrec[i], powerrec[i]))
 		log.close()
 		## Print Results
 		plt.subplot(211)
 		plt.ylabel('Phi, Deg')
 		plt.xlabel('Timestep')
 		# plt.plot(phirec)
-		plt.plot(philprec)
+		plt.plot(phirec)
 		plt.plot(phikfrec,'g--')
 		# plt.plot(gxrec)
 		# plt.plot(phidotrec)
@@ -272,7 +272,7 @@ if __name__=="__main__":
 		plt.ylabel('Theta, Deg')
 		plt.xlabel('Timestep')
 		# plt.plot(thetarec)
-		plt.plot(thetalprec)
+		plt.plot(thetarec)
 		plt.plot(thetakfrec,'g--')
 		# plt.plot(gyrec)
 		# plt.plot(thetadotrec)
